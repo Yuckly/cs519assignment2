@@ -5,17 +5,19 @@ name: Build and deploy Node.js project to Azure Function App - 519spring2024-hom
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
+    paths: [ "Node/API1/**" ]
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  AZURE_FUNCTIONAPP_NAME: '519spring2024-homework2'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'Node/API1' # set this to the path to your web app project, defaults to the repository root
   NODE_VERSION: '16.x' # set this to the node version to use (supports 8.x, 10.x, 12.x)
 
 jobs:
-  build:
-    runs-on: windows-latest
+  build-and-deployment:
+    runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v4
@@ -24,35 +26,18 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: './Node/API1/package.json'
 
       - name: 'Resolve Project Dependencies Using Npm'
-        shell: pwsh
+        shell: bash
         run: |
           pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
           npm install
           npm run build --if-present
           npm run test --if-present
           popd
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v3
-        with:
-          name: node-app
-          path: .
-
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v3
-        with:
-          name: node-app
-      
+          
       - name: 'Run Azure Functions Action'
         uses: Azure/functions-action@v1
         id: fa
